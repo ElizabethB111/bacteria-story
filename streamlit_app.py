@@ -84,10 +84,10 @@ final_chart = alt.layer(
     bar,
     threshold_line,
     highlight_text
+).resolve_scale(
+    y='shared'
 ).properties(
-    width=900,
-    height=550,
-    title="🔬 Multidrug Resistance Across Three Antibiotics"
+    width=750, height=550, title="🔬 Multidrug Resistance"
 )
 
 # Streamlit title + chart
