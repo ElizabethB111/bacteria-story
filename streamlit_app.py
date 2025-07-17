@@ -29,12 +29,20 @@ df = pd.DataFrame(data)
 df_melt = df.melt(id_vars="Bacteria", var_name="Antibiotic", value_name="MIC")
 df_melt["log_MIC"] = np.log10(df_melt["MIC"])
 
-# Label multidrug-resistant bacteria
+# Normalize for safe string matching
+df_melt["Bacteria_clean"] = df_melt["Bacteria"].str.strip().str.lower()
 resistant_bacteria = ["Aerobacter aerogenes", "Klebsiella pneumoniae", "Pseudomonas aeruginosa"]
-df_melt["Resistant"] = df_melt["Bacteria"].apply(lambda x: "Multidrug-Resistant" if x in resistant_bacteria else "Other")
+resistant_clean = [b.lower() for b in resistant_bacteria]
+
+# Label resistant
+df_melt["Resistant"] = df_melt["Bacteria_clean"].apply(
+    lambda x: "Multidrug-Resistant" if x in resistant_clean else "Other"
+)
 
 # Tooltip notes
-df_melt["Note"] = df_melt["Resistant"].apply(lambda r: "⚠️ Likely ineffective" if r == "Multidrug-Resistant" else "")
+df_melt["Note"] = df_melt["Resistant"].apply(
+    lambda r: "⚠️ Likely ineffective" if r == "Multidrug-Resistant" else ""
+)
 
 # Base bar chart
 bar = alt.Chart(df_melt).mark_bar().encode(
@@ -70,7 +78,7 @@ highlight_text = alt.Chart(df_melt[df_melt["Resistant"] == "Multidrug-Resistant"
     text=alt.value("High Resistance")
 )
 
-# Reference rule (log MIC = 1 → MIC = 10)
+# Reference rule at MIC = 10 → log10(10) = 1
 threshold_line = alt.Chart(pd.DataFrame({'x': [np.log10(10)]})).mark_rule(
     strokeDash=[4, 3],
     color='black'
@@ -90,9 +98,17 @@ final_chart = alt.layer(
     title="🔬 Multidrug Resistance Across Three Antibiotics"
 )
 
-# Streamlit title + chart
+# Streamlit layout
 st.title("🧬 The Resistant Few: When No Antibiotic Works")
-st.altair_chart(final_chart, use_container_width=True)
+
+# Optional debug: uncomment if needed
+# st.write(df_melt[df_melt["Resistant"] == "Multidrug-Resistant"])
+
+if df_melt[df_melt["Resistant"] == "Multidrug-Resistant"].empty:
+    st.warning("No multidrug-resistant bacteria were detected — check matching logic.")
+else:
+    st.altair_chart(final_chart, use_container_width=True)
+
 
 
 
