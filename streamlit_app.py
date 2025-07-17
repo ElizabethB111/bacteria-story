@@ -25,38 +25,37 @@ data = [
 
 df = pd.DataFrame(data)
 
-# Title
-st.title("🧫 Bacteria Resistance Explorer")
+df["log_Penicillin"] = np.log10(df["Penicillin"])
 
-# Sidebar filters
-st.sidebar.header("🔍 Filter Options")
-selected_antibiotic = st.sidebar.selectbox("Choose an antibiotic", ["Penicillin", "Streptomycin", "Neomycin"])
-selected_gram = st.sidebar.multiselect("Gram Staining", df["Gram_Staining"].unique(), default=df["Gram_Staining"].unique())
-selected_genus = st.sidebar.multiselect("Genus", df["Genus"].unique(), default=df["Genus"].unique())
+# Color scale
+color_scale = alt.Scale(
+    domain=["positive", "negative"],
+    range=["crimson", "steelblue"]
+)
 
-# Filtered dataframe
-filtered_df = df[
-    df["Gram_Staining"].isin(selected_gram) &
-    df["Genus"].isin(selected_genus)
-]
+# Base chart
+base = alt.Chart(df).mark_bar().encode(
+    x=alt.X("log_Penicillin:Q", title="log₁₀(MIC of Penicillin)"),
+    y=alt.Y("Bacteria:N", sort='-x', title="Bacterial Species"),
+    color=alt.Color("Gram_Staining:N", scale=color_scale),
+    tooltip=["Bacteria", "Penicillin", "Gram_Staining"]
+)
 
-# Log transform (optional for better scaling)
-filtered_df["log_MIC"] = np.log10(filtered_df[selected_antibiotic])
+# Add text labels
+text = base.mark_text(
+    align='left',
+    dx=3,
+    color='black'
+).encode(
+    text=alt.Text("Gram_Staining:N")
+)
 
-# Altair plot
-st.subheader(f"Resistance to {selected_antibiotic}")
-chart = alt.Chart(filtered_df).mark_bar().encode(
-    x=alt.X("log_MIC:Q", title=f"log₁₀(MIC for {selected_antibiotic})"),
-    y=alt.Y("Bacteria:N", sort='-x'),
-    tooltip=["Bacteria", selected_antibiotic, "Gram_Staining", "Genus"]
-).properties(
+# Combine chart and text
+chart = (base + text).properties(
     width=700,
-    height=500
-).interactive()
+    height=500,
+    title="Penicillin Resistance by Bacterial Species and Gram Stain"
+)
 
 st.altair_chart(chart)
-
-# Data table
-with st.expander("📄 View Filtered Data"):
-    st.dataframe(filtered_df.sort_values(by=selected_antibiotic))
 
