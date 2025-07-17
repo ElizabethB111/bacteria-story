@@ -54,7 +54,4 @@ chart = alt.Chart(df_melt).mark_bar().encode(
 
 st.altair_chart(chart)
 
-)
-
-st.altair_chart(chart)
 
