@@ -85,7 +85,7 @@ final_chart = alt.layer(
     threshold_line,
     highlight_text
 ).properties(
-    width=750,
+    width=900,
     height=550,
     title="🔬 Multidrug Resistance Across Three Antibiotics"
 )
