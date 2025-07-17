@@ -1,3 +1,5 @@
+
+
 import altair as alt
 import pandas as pd
 import numpy as np
@@ -25,90 +27,34 @@ data = [
 
 df = pd.DataFrame(data)
 
-# Melt to long format
+# Melt for plotting
 df_melt = df.melt(id_vars="Bacteria", var_name="Antibiotic", value_name="MIC")
 df_melt["log_MIC"] = np.log10(df_melt["MIC"])
 
-# Normalize for safe string matching
-df_melt["Bacteria_clean"] = df_melt["Bacteria"].str.strip().str.lower()
-resistant_bacteria = ["Aerobacter aerogenes", "Klebsiella pneumoniae", "Pseudomonas aeruginosa"]
-resistant_clean = [b.lower() for b in resistant_bacteria]
+# Mark resistant bacteria
+resistant_set = ["Aerobacter aerogenes", "Klebsiella pneumoniae", "Pseudomonas aeruginosa"]
+df_melt["Resistant"] = df_melt["Bacteria"].apply(lambda x: "Multidrug-Resistant" if x in resistant_set else "Other")
 
-# Label resistant
-df_melt["Resistant"] = df_melt["Bacteria_clean"].apply(
-    lambda x: "Multidrug-Resistant" if x in resistant_clean else "Other"
-)
+# Chart
+st.title("🔬 Multidrug-Resistant Bacteria: When No Antibiotic Works")
 
-# Tooltip notes
-df_melt["Note"] = df_melt["Resistant"].apply(
-    lambda r: "⚠️ Likely ineffective" if r == "Multidrug-Resistant" else ""
-)
-
-# Base bar chart
-bar = alt.Chart(df_melt).mark_bar().encode(
+chart = alt.Chart(df_melt).mark_bar().encode(
     x=alt.X("log_MIC:Q", title="log₁₀(MIC)"),
-    y=alt.Y("Bacteria:N", sort="-x"),
+    y=alt.Y("Bacteria:N", sort="-x", title="Bacterial Species"),
     color=alt.Color("Antibiotic:N"),
+    tooltip=["Bacteria", "Antibiotic", "MIC"],
     opacity=alt.condition(
         alt.datum.Resistant == "Multidrug-Resistant",
         alt.value(1),
         alt.value(0.3)
-    ),
-    tooltip=["Bacteria", "Antibiotic", "MIC", "Resistant", "Note"]
-)
-
-# Highlight background for resistant bacteria
-highlight_bg = alt.Chart(df_melt[df_melt["Resistant"] == "Multidrug-Resistant"]).mark_rect(
-    opacity=0.08,
-    color='crimson'
-).encode(
-    y=alt.Y('Bacteria:N', sort='-x')
-)
-
-# Inline annotation text
-highlight_text = alt.Chart(df_melt[df_melt["Resistant"] == "Multidrug-Resistant"]).mark_text(
-    align='left',
-    dx=3,
-    color='crimson',
-    fontWeight='bold',
-    fontSize=11
-).encode(
-    x="log_MIC:Q",
-    y="Bacteria:N",
-    text=alt.value("High Resistance")
-)
-
-# Reference rule at MIC = 10 → log10(10) = 1
-threshold_line = alt.Chart(pd.DataFrame({'x': [np.log10(10)]})).mark_rule(
-    strokeDash=[4, 3],
-    color='black'
-).encode(
-    x='x:Q'
-)
-
-# Combine all layers
-final_chart = alt.layer(
-    highlight_bg,
-    bar,
-    threshold_line,
-    highlight_text
+    )
 ).properties(
-    width=750,
-    height=550,
-    title="🔬 Multidrug Resistance Across Three Antibiotics"
+    width=700,
+    height=500,
+    title="Resistance Profile of Bacteria Across Three Antibiotics"
 )
 
-# Streamlit layout
-st.title("🧬 The Resistant Few: When No Antibiotic Works")
-
-# Optional debug: uncomment if needed
-# st.write(df_melt[df_melt["Resistant"] == "Multidrug-Resistant"])
-
-if df_melt[df_melt["Resistant"] == "Multidrug-Resistant"].empty:
-    st.warning("No multidrug-resistant bacteria were detected — check matching logic.")
-else:
-    st.altair_chart(final_chart, use_container_width=True)
-
+st.altair_chart(chart)
 
 
 
